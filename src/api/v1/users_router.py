@@ -1,6 +1,7 @@
 import redis
 from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import status as fs_status
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -10,8 +11,8 @@ from models.user import User
 from schemas.users import UserCreate, UserToken, UserInDB
 from typing import Any
 from fastapi.responses import ORJSONResponse
+from services.users_service import users_crud
 
-app = FastAPI()
 
 # Redis client
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
@@ -40,37 +41,27 @@ def create_access_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 
+###############################################################################
 users_router: APIRouter = APIRouter()
 
-@users_router.post(
-    '/register',
-    response_model=UserInDB,
-)
-def register_user(
+
+@users_router.post('/register', response_model=UserInDB, status_code=fs_status.HTTP_201_CREATED)
+async def register_user(
     *,
     db: AsyncSession = Depends(get_session),
     user_creating: UserCreate,
 ) -> UserInDB:
-    
-    # здесь в репозитории будет логика регистрации
-    hashed_password: str = pwd_context.hash(user_creating.password)
-    user = User(
-        username=user_creating.username,
-        password=hashed_password,
-        email=user_creating.email,
+    user_exists = await users_crud.check_userdata_in_db(
+            db,
+            user_data={'username': user_creating.username, 'email': user_creating.email},
     )
-
-    # TODO проверить юзера перед сохранением, возвращать токен
-    # db.add(user)
-    # db.commit()
-    # db.refresh(user)
-
-    return UserInDB(
-        id=1,
-        username=user.username,
-        email=user.email,
-        is_active=1,
-    )
+    if user_exists:
+        raise HTTPException(
+            status_code=fs_status.HTTP_400_BAD_REQUEST,
+            detail='Record with the same username or email already exists'
+        )
+    new_record = await users_crud.create(db=db, obj_in=user_creating)
+    return new_record
 
 
 # @users_router.post("/auth")
