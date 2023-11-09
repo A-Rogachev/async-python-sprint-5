@@ -1,8 +1,11 @@
 from datetime import timedelta
+from functools import wraps
 
+import jwt
 import redis
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as fs_status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import app_settings
@@ -11,8 +14,26 @@ from models.user import User
 from schemas.users import UserAuth, UserCreate, UserInDB, UserToken
 from services.users_service import users_crud
 
-
 users_router: APIRouter = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+
+def token_required(function):
+    @wraps(function)
+    async def wrapper(token: str = Depends(oauth2_scheme)):
+        try:
+            username = jwt.decode(
+                token,
+                app_settings.SECRET_KEY,
+                algorithms=[app_settings.ALGORITHM])['sub']
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail='Token expired.')
+        except jwt.DecodeError:
+            raise HTTPException(status_code=401, detail='Missing or invalid token.')
+        with redis.Redis(host='localhost', port=6379, db=0) as redis_client:
+            if not redis_client.get(username):
+                raise HTTPException(status_code=401, detail='Missing or invalid token.')
+        return await function(token)
+    return wrapper
 
 
 @users_router.post('/register', response_model=UserInDB, status_code=fs_status.HTTP_201_CREATED)
@@ -59,20 +80,3 @@ async def authenticate_user(
         access_token=access_token,
         token_type="bearer"
     )
-
-
-
-from fastapi.security import OAuth2PasswordBearer
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
-import jwt
-
-@users_router.get("/protected")
-def protected_route(token: str = Depends(oauth2_scheme)):
-    # Verify the access token from Redis
-    username = jwt.decode(
-        token,
-        app_settings.SECRET_KEY,
-        algorithms=[app_settings.ALGORITHM])["sub"]
-    if not redis_client.get(username) == token:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return {"message": "Protected resource"}

@@ -41,3 +41,4 @@ services:
 
 volumes:
   filestorage_db_volume:
+  filestorage_redis_volume:

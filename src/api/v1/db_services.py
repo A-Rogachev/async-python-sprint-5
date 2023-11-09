@@ -4,14 +4,17 @@ import psycopg2
 import redis
 from fastapi import APIRouter, Depends
 
+from api.v1.authorization import token_required, oauth2_scheme
 from core.config import app_settings
 from schemas.db_services import DbServicesPing
 
 
 db_services_router: APIRouter = APIRouter()
 
+
 @db_services_router.get('/ping', response_model=DbServicesPing)
-async def ping() :
+@token_required
+async def ping(token: str = Depends(oauth2_scheme)):
     """
     Получение информации о времени доступа ко всем связанным сервисам.
     """
