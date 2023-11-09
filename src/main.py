@@ -4,6 +4,7 @@ from fastapi.responses import ORJSONResponse
 
 # from api.v1 import base
 from core.config import app_settings
+from api.v1 import users_router
 
 app: FastAPI = FastAPI(
     title=app_settings.app_title,
@@ -13,6 +14,7 @@ app: FastAPI = FastAPI(
 )
 
 # app.include_router(base.api_router, prefix='/api/v1')
+app.include_router(users_router.users_router, prefix='/api/v1')
 
 if __name__ == '__main__':
     uvicorn.run(
