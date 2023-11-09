@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class AppUserBase(BaseModel):
@@ -17,13 +17,25 @@ class UserCreate(AppUserBase):
 
     username: str
     password: str
-    email: str
+    email: EmailStr
+
+
+class UserAuth(BaseModel):
+    """
+    Схема, используемая для авторизации пользователя (получения токена).
+    """
+
+    username: str
+    password: str
 
 
 class UserToken(AppUserBase):
     """
     Схема, используемая для возврата токена при регистрации.
     """
+    access_token: str
+    token_type: str
+
 
 class UserInDB(AppUserBase):
     """
@@ -32,5 +44,5 @@ class UserInDB(AppUserBase):
 
     id: int
     username: str
-    email: str
+    email: EmailStr
     is_active: int
