@@ -1,10 +1,12 @@
-from fastapi import APIRouter
 import time
+
 import psycopg2
 import redis
+from fastapi import APIRouter, Depends
+
 from core.config import app_settings
-from sqlalchemy import create_engine
 from schemas.db_services import DbServicesPing
+
 
 db_services_router: APIRouter = APIRouter()
 
@@ -16,12 +18,12 @@ async def ping() :
     postgresql_response_time: str = await get_postgresql_ping_value()
     redis_response_time: str = await get_redis_ping_value()
     return DbServicesPing(
-        postgresql_db=postgresql_response_time,
-        redis_cache=f'{redis_response_time} seconds',
+        postgresql_db=f'{postgresql_response_time:.5f} seconds',
+        redis_cache=f'{redis_response_time:.5f} seconds',
     )
 
 
-async def get_redis_ping_value() -> str:
+async def get_redis_ping_value() -> str | float:
     """
     Время доступа к базе данных для кеширования токенов пользователей.
     """
@@ -35,13 +37,16 @@ async def get_redis_ping_value() -> str:
     return redis_response_time
 
 
-async def get_postgresql_ping_value() -> str:
+async def get_postgresql_ping_value() -> str | float:
     """
     Время доступа к базе данных postgresql.
     """
     postgresql_start_time = time.time()
     try:
-        raise psycopg2.OperationalError
+        dsn = str(app_settings.DATABASE_DSN).replace('+asyncpg', '')
+        connection = psycopg2.connect(dsn=dsn)
+        postgresql_response_time = round(time.time() - postgresql_start_time, 5)
+        connection.close()
     except psycopg2.OperationalError:
         postgresql_response_time = 'not available'
     return postgresql_response_time
