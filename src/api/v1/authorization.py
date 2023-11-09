@@ -53,8 +53,8 @@ async def authenticate_user(
         {"sub": user.username},
         timedelta(minutes=app_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    redis_client = redis.Redis(host='localhost', port=6379, db=0)
-    redis_client.set(user.username, access_token)
+    with redis.Redis(host='localhost', port=6379, db=0) as redis_client:
+        redis_client.set(user.username, access_token)
     return UserToken(
         access_token=access_token,
         token_type="bearer"
