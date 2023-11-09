@@ -13,6 +13,17 @@ services:
       - ./.env
     restart: unless-stopped
 
+  filestorage_redis:
+    image: redis:alpine
+    container_name: filestorage-redis
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - filestorage_redis_volume:/data
+    restart: unless-stopped
+    depends_on:
+      - filestorage_db
+
   # backend_app:
   #   build: ./dockerization/.
   #   container_name: backend-app
