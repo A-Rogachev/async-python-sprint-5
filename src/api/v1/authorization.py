@@ -61,10 +61,18 @@ async def authenticate_user(
     )
 
 
-# @users_router.get("/protected")
-# def protected_route(token: str = Depends(oauth2_scheme)):
-#     # Verify the access token from Redis
-#     username = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])["sub"]
-#     if not redis_client.get(username) == token:
-#         raise HTTPException(status_code=401, detail="Invalid token")
-#     return {"message": "Protected resource"}
+
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+import jwt
+
+@users_router.get("/protected")
+def protected_route(token: str = Depends(oauth2_scheme)):
+    # Verify the access token from Redis
+    username = jwt.decode(
+        token,
+        app_settings.SECRET_KEY,
+        algorithms=[app_settings.ALGORITHM])["sub"]
+    if not redis_client.get(username) == token:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return {"message": "Protected resource"}
