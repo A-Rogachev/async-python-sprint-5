@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import app_settings
 from db.db import get_session
+from db.redis_cache import get_redis_client
 from models.user import User
 from schemas.users import UserAuth, UserCreate, UserInDB, UserToken
 from services.users_service import users_crud
@@ -19,7 +20,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
 def token_required(function):
     @wraps(function)
-    async def wrapper(token: str = Depends(oauth2_scheme)):
+    async def wrapper(
+        token: str = Depends(oauth2_scheme),
+        redis_client: redis.Redis = Depends(get_redis_client),
+    ):
         try:
             username = jwt.decode(
                 token,
@@ -29,9 +33,8 @@ def token_required(function):
             raise HTTPException(status_code=401, detail='Token expired.')
         except jwt.DecodeError:
             raise HTTPException(status_code=401, detail='Missing or invalid token.')
-        with redis.Redis(host='localhost', port=6379, db=0) as redis_client:
-            if not redis_client.get(username):
-                raise HTTPException(status_code=401, detail='Missing or invalid token.')
+        if not redis_client.get(username):
+            raise HTTPException(status_code=401, detail='Missing or invalid token.')
         return await function(token)
     return wrapper
 
@@ -62,6 +65,7 @@ async def register_user(
 async def authenticate_user(
     *,
     db: AsyncSession = Depends(get_session),
+    redis_client: redis.Redis = Depends(get_redis_client),
     user_authentication: UserAuth,
 ) -> UserToken:
     user: User | None = await users_crud.get_user_by_username(
@@ -74,8 +78,7 @@ async def authenticate_user(
         {"sub": user.username},
         timedelta(minutes=app_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    with redis.Redis(host='localhost', port=6379, db=0) as redis_client:
-        redis_client.set(user.username, access_token)
+    redis_client.set(user.username, access_token)
     return UserToken(
         access_token=access_token,
         token_type="bearer"
