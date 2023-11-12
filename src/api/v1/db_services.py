@@ -4,7 +4,7 @@ import psycopg2
 import redis
 from fastapi import APIRouter, Depends
 
-from api.v1.authorization import oauth2_scheme, token_required
+from api.v1.authorization import oauth2_scheme, check_token
 from core.config import app_settings
 from db.redis_cache import get_redis_client
 from schemas.db_services import DbServicesPing
@@ -13,7 +13,6 @@ db_services_router: APIRouter = APIRouter()
 
 
 @db_services_router.get('/ping', response_model=DbServicesPing)
-@token_required
 async def ping(
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
@@ -21,6 +20,7 @@ async def ping(
     """
     Получение информации о времени доступа ко всем связанным сервисам.
     """
+    check_token(token)
     postgresql_response_time: str = await get_postgresql_ping_value()
     redis_response_time: str = await get_redis_ping_value()
     return DbServicesPing(

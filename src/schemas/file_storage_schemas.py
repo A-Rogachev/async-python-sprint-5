@@ -3,7 +3,7 @@ import datetime
 from pydantic import BaseModel
 
 
-class UploadFile(BaseModel):
+class UploadFileRequest(BaseModel):
     """
     Схема, используемая при загрузке файла.
     """

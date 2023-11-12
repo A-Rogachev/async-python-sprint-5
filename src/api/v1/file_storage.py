@@ -1,20 +1,21 @@
 
-from typing import Any
-from aiohttp import ClientError
+from typing import Any, Optional
 
 import jwt
 import minio
 import redis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.v1.authorization import oauth2_scheme, token_required
+from api.v1.authorization import oauth2_scheme
 from core.config import app_settings
 from db.db import async_session, get_session
 from db.redis_cache import get_redis_client
 from db.storage_s3 import get_minio_client
+from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse
 from models.user import User
 from services.users_service import users_crud
+from api.v1.authorization import check_token
 
 files_router: APIRouter = APIRouter()
 
@@ -42,9 +43,12 @@ async def create_bucket_if_not_exists(
     if not minio_client.bucket_exists(bucketname):
         minio_client.make_bucket(bucketname)
 
+
 @files_router.post('/upload')
-@token_required
+# @token_required
 async def upload_file(
+    path: Optional[str] = None,
+    file_to_upload: UploadFile = File(...),
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
     minio_client: minio.Minio = Depends(get_minio_client),
@@ -53,24 +57,21 @@ async def upload_file(
     """
     Загрузка файла пользователем.
     """
-    user_name: str = await get_user_id_from_token(token)
+    username = await check_token(token)
     user_model: User = await users_crud.get_user_by_username(
         db=db,
-        username=user_name,
+        username=await get_user_id_from_token(token),
     )
     await create_bucket_if_not_exists(
         bucketname := f'storage-{user_model.id}',
         minio_client,
     )
-
-
-    # print(minio_client.list_buckets())
-    # import os
-    # await minio_client.meta.client.upload_file(
-    #     '../example.txt',
-    #     '/test_bucket',
-    #     'file.txt',
-    # )
+    path = path if path else '/'
+    await minio_client.fput_object(
+        file_path=file_to_upload.filename,
+        bucket_name=bucketname,
+        object_name=path + file_to_upload.filename,
+    )
     return {"message": 'success'}
 
 
