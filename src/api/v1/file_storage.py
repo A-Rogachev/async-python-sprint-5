@@ -20,6 +20,7 @@ from api.v1.authorization import check_token
 import os
 files_router: APIRouter = APIRouter()
 from starlette.responses import StreamingResponse
+from minio.versioningconfig import VersioningConfig, ENABLED
 
 async def create_bucket_if_not_exists(
     bucketname: str,
@@ -30,6 +31,10 @@ async def create_bucket_if_not_exists(
     """
     if not minio_client.bucket_exists(bucketname):
         minio_client.make_bucket(bucketname)
+        minio_client.set_bucket_versioning(
+            bucketname,
+            VersioningConfig(ENABLED),
+        )
 
 async def get_path_name_for_file(path: str, filename: str):
     if not path:
@@ -65,15 +70,17 @@ async def upload_file(
         minio_client,
     )
     object_name: str = await get_path_name_for_file(path, file_to_upload.filename)
-
+    # сделать проверку на совпадение имен.
     file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
-    minio_client.put_object(
+    response = minio_client.put_object(
         bucket_name=bucketname,
-        object_name=path + file_to_upload.filename,
+        object_name=object_name,
         data=file_to_upload.file,
         length=file_size,
         content_type=file_to_upload.content_type
     )
+    print(response.version_id)
+    
 
     # здесь записываем в базу postgres
     # ---------------------------------------------------------
