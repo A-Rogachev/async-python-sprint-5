@@ -6,6 +6,7 @@ import minio
 import redis
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.responses import FileResponse
 
 from api.v1.authorization import oauth2_scheme
 from core.config import app_settings
@@ -18,7 +19,7 @@ from services.users_service import users_crud
 from api.v1.authorization import check_token
 import os
 files_router: APIRouter = APIRouter()
-
+from starlette.responses import StreamingResponse
 
 async def create_bucket_if_not_exists(
     bucketname: str,
@@ -92,7 +93,7 @@ async def upload_file(
 
 
 # {
-#     "id": "a19ad56c-d8c6-4376-b9bb-ea82f7f5a853",
+#     "version_id": "a19ad56c-d8c6-4376-b9bb-ea82f7f5a853",
 #     "name": "notes.txt",
 #     "created_ad": "2020-09-11T17:22:05Z",
 #     "path": "/homework/test-fodler/notes.txt",
@@ -101,12 +102,39 @@ async def upload_file(
 # }
 
 
+
+
+from pydantic import BaseModel
+
+class DownloadFile(BaseModel):
+    file_path: str
+    file_id: Optional[str] = None
+
+# TODO: здесь добавить возможность указать директорию для скачивания
 @files_router.post('/download')
 async def download_file(
-    file_to_download: UploadFile = File(None),
+    request_body: DownloadFile,
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
     minio_client: minio.Minio = Depends(get_minio_client),
     db: AsyncSession = Depends(get_session),
 ) -> Any:
-    ...
+    """
+    Скачивание файла из хранилища.
+    """
+    # TODO: если файл не найден, то is_downloadabale = False
+    user_model: User = await users_crud.get_user_by_username(
+        db=db,
+        username=await check_token(token),
+    )
+    bucket_name: str = f'storage-{user_model.id}'
+    response = minio_client.get_object(
+        bucket_name=bucket_name,
+        object_name=request_body.file_path,
+    )
+    file_content = response.read()
+    return StreamingResponse(
+        iter([file_content]),
+        media_type='application/octet-stream',
+        headers={'Content-Disposition': 'attachment; filename="file.txt"'},
+    )
