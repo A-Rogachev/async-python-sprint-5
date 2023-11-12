@@ -16,7 +16,7 @@ from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse
 from models.user import User
 from services.users_service import users_crud
 from api.v1.authorization import check_token
-
+import os
 files_router: APIRouter = APIRouter()
 
 
@@ -47,7 +47,7 @@ async def create_bucket_if_not_exists(
 @files_router.post('/upload')
 # @token_required
 async def upload_file(
-    path: Optional[str] = None,
+    path: Optional[str] = '/',
     file_to_upload: UploadFile = File(...),
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
@@ -66,13 +66,19 @@ async def upload_file(
         bucketname := f'storage-{user_model.id}',
         minio_client,
     )
-    path = path if path else '/'
-    await minio_client.fput_object(
-        file_path=file_to_upload.filename,
+    path = path if path else '/'    
+    
+    
+    file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
+    minio_client.put_object(
         bucket_name=bucketname,
-        object_name=path + file_to_upload.filename,
+        object_name='/new/' + file_to_upload.filename,
+        data=file_to_upload.file,
+        length=file_size,
+        content_type=file_to_upload.content_type
     )
     return {"message": 'success'}
+
 
 
 # {
