@@ -40,10 +40,14 @@ def token_required(function):
             raise HTTPException(status_code=401, detail='Missing or invalid token.')
         if not redis_client.get(username):
             raise HTTPException(status_code=401, detail='Missing or invalid token.')
-        print(inspect.signature(function).parameters)
+        need_args = {}
         if 'db' in inspect.signature(function).parameters:
-            return await function(token, db=db)
-        return await function(token)
+            need_args['db'] = db
+        if 'minio_client' in inspect.signature(function).parameters:
+            need_args['minio_client'] = minio_client
+        if 'redis_client' in inspect.signature(function).parameters:
+            need_args['redis_client'] = redis_client
+        return await function(token, **need_args)
     return wrapper
 
 

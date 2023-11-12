@@ -1,30 +1,23 @@
 
-import redis
-from fastapi import APIRouter, Depends
+from typing import Any
+from aiohttp import ClientError
 
+import jwt
+import minio
+import redis
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.v1.authorization import oauth2_scheme, token_required
+from core.config import app_settings
+from db.db import async_session, get_session
 from db.redis_cache import get_redis_client
 from db.storage_s3 import get_minio_client
-from typing import Any
-files_router: APIRouter = APIRouter()
-from api.v1.authorization import oauth2_scheme, token_required
-import minio
-from db.db import get_session, async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-from services.users_service import users_crud
 from models.user import User
+from services.users_service import users_crud
 
-# async def create_bucket_if_not_exists(minio_client):
-#     try:
-#         await minio_client.meta.client.head_bucket(Bucket='/test_bucket')
-#     except ClientError:
-#         await minio_client.create_bucket(
-#             Bucket='test_bucket',
-#             CreateBucketConfiguration={'LocationConstraint': 'your-region'})
-#     except Exception as e:
-#         print(f"An error occurred: {str(e)}")
-from core.config import app_settings
-import jwt
-from fastapi import HTTPException
+files_router: APIRouter = APIRouter()
+
 
 async def get_user_id_from_token(
     token: str,
@@ -38,6 +31,16 @@ async def get_user_id_from_token(
         algorithms=[app_settings.ALGORITHM]
     ).get('sub')
 
+
+async def create_bucket_if_not_exists(
+    bucketname: str,
+    minio_client: minio.Minio = Depends(get_minio_client),
+):
+    """
+    Создает корзину для пользователя в хранилище, в случае если она не существует.
+    """
+    if not minio_client.bucket_exists(bucketname):
+        minio_client.make_bucket(bucketname)
 
 @files_router.post('/upload')
 @token_required
@@ -55,9 +58,10 @@ async def upload_file(
         db=db,
         username=user_name,
     )
-    user_id: int = user_model.id
-    print(user_id)
-
+    await create_bucket_if_not_exists(
+        bucketname := f'storage-{user_model.id}',
+        minio_client,
+    )
 
 
     # print(minio_client.list_buckets())
