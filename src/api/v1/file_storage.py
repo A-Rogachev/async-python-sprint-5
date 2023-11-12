@@ -20,19 +20,6 @@ import os
 files_router: APIRouter = APIRouter()
 
 
-async def get_user_id_from_token(
-    token: str,
-) -> str:
-    """
-    Возвращает имя пользователя.
-    """
-    return jwt.decode(
-        token,
-        app_settings.SECRET_KEY,
-        algorithms=[app_settings.ALGORITHM]
-    ).get('sub')
-
-
 async def create_bucket_if_not_exists(
     bucketname: str,
     minio_client: minio.Minio = Depends(get_minio_client),
@@ -47,8 +34,8 @@ async def create_bucket_if_not_exists(
 @files_router.post('/upload')
 # @token_required
 async def upload_file(
-    path: Optional[str] = '/',
     file_to_upload: UploadFile = File(...),
+    path: Optional[str] = None,
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
     minio_client: minio.Minio = Depends(get_minio_client),
@@ -57,26 +44,42 @@ async def upload_file(
     """
     Загрузка файла пользователем.
     """
-    username = await check_token(token)
     user_model: User = await users_crud.get_user_by_username(
         db=db,
-        username=await get_user_id_from_token(token),
+        username=await check_token(token),
     )
     await create_bucket_if_not_exists(
         bucketname := f'storage-{user_model.id}',
         minio_client,
     )
-    path = path if path else '/'    
-    
+    print('hererewrere', path)
+    if path and path.endswith('/'):
+        object_name = path + file_to_upload.filename
+    else:
+        object_name = file_to_upload.filename
     
     file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
-    minio_client.put_object(
-        bucket_name=bucketname,
-        object_name='/new/' + file_to_upload.filename,
-        data=file_to_upload.file,
-        length=file_size,
-        content_type=file_to_upload.content_type
-    )
+    # minio_client.put_object(
+    #     bucket_name=bucketname,
+    #     object_name=path + file_to_upload.filename,
+    #     data=file_to_upload.file,
+    #     length=file_size,
+    #     content_type=file_to_upload.content_type
+    # )
+
+    # --------------------------------
+    to_postgres = {
+        'id': 'some_id',
+        'name': file_to_upload.filename,
+        'created_ad': '2020-09-11T17:22:05Z',
+        'size': file_size,
+        'path': object_name,
+        'is_downloadable': True
+    }
+    from pprint import pprint
+    pprint(to_postgres)
+    # --------------------------------
+
     return {"message": 'success'}
 
 
