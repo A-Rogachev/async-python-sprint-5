@@ -16,7 +16,7 @@ db_services_router: APIRouter = APIRouter()
 @token_required
 async def ping(
     token: str = Depends(oauth2_scheme),
-    redis_client: redis.Redis = Depends(get_redis_client)
+    redis_client: redis.Redis = Depends(get_redis_client),
 ) -> DbServicesPing:
     """
     Получение информации о времени доступа ко всем связанным сервисам.

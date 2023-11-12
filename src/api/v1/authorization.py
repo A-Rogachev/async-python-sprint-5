@@ -1,6 +1,6 @@
 from datetime import timedelta
 from functools import wraps
-
+import inspect
 import jwt
 import redis
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,6 +14,9 @@ from db.redis_cache import get_redis_client
 from models.user import User
 from schemas.users import UserAuth, UserCreate, UserInDB, UserToken
 from services.users_service import users_crud
+from typing import Optional
+from minio import Minio
+from db.storage_s3 import get_minio_client
 
 users_router: APIRouter = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
@@ -23,6 +26,8 @@ def token_required(function):
     async def wrapper(
         token: str = Depends(oauth2_scheme),
         redis_client: redis.Redis = Depends(get_redis_client),
+        minio_client: Optional[Minio] = Depends(get_minio_client),
+        db: Optional[AsyncSession] = Depends(get_session),
     ):
         try:
             username = jwt.decode(
@@ -35,6 +40,9 @@ def token_required(function):
             raise HTTPException(status_code=401, detail='Missing or invalid token.')
         if not redis_client.get(username):
             raise HTTPException(status_code=401, detail='Missing or invalid token.')
+        print(inspect.signature(function).parameters)
+        if 'db' in inspect.signature(function).parameters:
+            return await function(token, db=db)
         return await function(token)
     return wrapper
 
