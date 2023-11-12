@@ -4,7 +4,7 @@ from typing import Any, Optional
 import jwt
 import minio
 import redis
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.v1.authorization import oauth2_scheme
@@ -30,12 +30,21 @@ async def create_bucket_if_not_exists(
     if not minio_client.bucket_exists(bucketname):
         minio_client.make_bucket(bucketname)
 
+async def get_path_name_for_file(path: str, filename: str):
+    if not path:
+        object_name = filename
+    else:
+        if path.endswith('/'):
+            object_name = path + filename
+        else:
+            object_name = path
+    return object_name
+
 
 @files_router.post('/upload')
-# @token_required
 async def upload_file(
-    file_to_upload: UploadFile = File(...),
-    path: Optional[str] = None,
+    file_to_upload: UploadFile = File(None),
+    path: Optional[str] = Form(None) ,
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
     minio_client: minio.Minio = Depends(get_minio_client),
@@ -44,6 +53,8 @@ async def upload_file(
     """
     Загрузка файла пользователем.
     """
+    if not file_to_upload:
+        raise HTTPException(status_code=400, detail='You must send a file')
     user_model: User = await users_crud.get_user_by_username(
         db=db,
         username=await check_token(token),
@@ -52,43 +63,33 @@ async def upload_file(
         bucketname := f'storage-{user_model.id}',
         minio_client,
     )
-    print('hererewrere', path)
-    if path and path.endswith('/'):
-        object_name = path + file_to_upload.filename
-    else:
-        object_name = file_to_upload.filename
-    
-    file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
-    # minio_client.put_object(
-    #     bucket_name=bucketname,
-    #     object_name=path + file_to_upload.filename,
-    #     data=file_to_upload.file,
-    #     length=file_size,
-    #     content_type=file_to_upload.content_type
-    # )
+    object_name: str = await get_path_name_for_file(path, file_to_upload.filename)
 
-    # --------------------------------
-    to_postgres = {
-        'id': 'some_id',
-        'name': file_to_upload.filename,
-        'created_ad': '2020-09-11T17:22:05Z',
-        'size': file_size,
-        'path': object_name,
-        'is_downloadable': True
-    }
-    from pprint import pprint
-    pprint(to_postgres)
-    # --------------------------------
+    file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
+    minio_client.put_object(
+        bucket_name=bucketname,
+        object_name=path + file_to_upload.filename,
+        data=file_to_upload.file,
+        length=file_size,
+        content_type=file_to_upload.content_type
+    )
+
+    # здесь записываем в базу postgres
+    # ---------------------------------------------------------
+    # to_postgres = {
+    #     'id': 'some_id',
+    #     'name': file_to_upload.filename,
+    #     'created_ad': '2020-09-11T17:22:05Z',
+    #     'size': file_size,
+    #     'path': object_name,
+    #     'is_downloadable': True
+    # }
+    # from pprint import pprint
+    # pprint(to_postgres)
+    # ---------------------------------------------------------
 
     return {"message": 'success'}
 
-
-
-# {
-#     "path": <full-path-to-file>||<path-to-folder>,
-# }
-
-# Response
 
 # {
 #     "id": "a19ad56c-d8c6-4376-b9bb-ea82f7f5a853",
@@ -98,3 +99,14 @@ async def upload_file(
 #     "size": 8512,
 #     "is_downloadable": true
 # }
+
+
+@files_router.post('/download')
+async def download_file(
+    file_to_download: UploadFile = File(None),
+    token: str = Depends(oauth2_scheme),
+    redis_client: redis.Redis = Depends(get_redis_client),
+    minio_client: minio.Minio = Depends(get_minio_client),
+    db: AsyncSession = Depends(get_session),
+) -> Any:
+    ...
