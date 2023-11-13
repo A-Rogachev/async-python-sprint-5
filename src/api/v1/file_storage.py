@@ -14,7 +14,7 @@ from db.db import async_session, get_session
 from db.redis_cache import get_redis_client
 from db.storage_s3 import get_minio_client
 from models.user import User
-from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse
+from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse, DownloadFile
 from services.file_storage_service import uploaded_files_crud
 from services.users_service import users_crud
 
@@ -106,9 +106,6 @@ async def upload_file(
             ).model_dump()
 
 
-
-
-# TODO: здесь добавить возможность указать директорию для скачивания
 @files_router.post('/download')
 async def download_file(
     request_body: DownloadFile,
@@ -136,3 +133,17 @@ async def download_file(
         media_type='application/octet-stream',
         headers={'Content-Disposition': 'attachment; filename="file.txt"'},
     )
+
+
+@files_router.get('/files')
+async def get_records_about_user_files(
+    token: str = Depends(oauth2_scheme),
+    redis_client: redis.Redis = Depends(get_redis_client),
+    minio_client: minio.Minio = Depends(get_minio_client),
+    db: AsyncSession = Depends(get_session),
+) -> Any:
+    """
+    Возвращает информацию о всех загруженных пользователем файлах.
+    """
+
+    
