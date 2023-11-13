@@ -4,20 +4,12 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class UploadFileRequest(BaseModel):
-    """
-    Схема, используемая при загрузке файла.
-    """
-
-    path: str
-
-
 class DownloadFile(BaseModel):
     """
     Схема, используемая при скачивании файла.
     """
     file_path: str
-    file_id: Optional[str] = None
+    version_id: Optional[str] = None
 
 
 class UploadFileResponse(BaseModel):

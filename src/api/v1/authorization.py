@@ -11,7 +11,7 @@ from core.config import app_settings
 from db.db import get_session
 from db.redis_cache import get_redis_client
 from models.user import User
-from schemas.users import UserAuth, UserCreate, UserInDB, UserToken
+from schemas.user_schemas import UserAuth, UserCreate, UserInDB, UserToken
 from services.users_service import users_crud
 
 users_router: APIRouter = APIRouter()

@@ -1,9 +1,9 @@
 import asyncio
 
 import redis
-from dotenv import load_dotenv
 
-load_dotenv()
+from core.config import app_settings
+
 
 async def get_redis_client() -> redis.Redis:
     """
@@ -12,6 +12,6 @@ async def get_redis_client() -> redis.Redis:
     loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
     redis_client: redis.Redis = await loop.run_in_executor(
         None,
-        lambda: redis.Redis(host='localhost', port=6379)
+        lambda: redis.Redis(host=app_settings.REDIS_HOST, port=app_settings.REDIS_PORT),
     )
     return redis_client

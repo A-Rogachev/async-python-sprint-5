@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from api.v1.authorization import check_token, oauth2_scheme
 from core.config import app_settings
 from db.redis_cache import get_redis_client
-from schemas.db_services import DbServicesPing
+from schemas.db_services_schemas import DbServicesPing
 
 db_services_router: APIRouter = APIRouter()
 
@@ -35,7 +35,11 @@ async def get_redis_ping_value() -> str | float:
     """
     redis_start_time = time.time()
     try:
-        with redis.Redis(host='localhost', port=6379, db=0) as redis_client:
+        with redis.Redis(
+            host=app_settings.REDIS_HOST,
+            port=app_settings.REDIS_PORT,
+            db=app_settings.REDIS_DB,
+        ) as redis_client:
             redis_client.ping()
             redis_response_time = round(time.time() - redis_start_time, 5)
     except redis.ConnectionError:

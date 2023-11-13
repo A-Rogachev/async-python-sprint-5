@@ -8,7 +8,7 @@ load_dotenv()
 
 engine: AsyncSession = create_async_engine(
     str(app_settings.DATABASE_DSN),
-    echo=True if app_settings.is_debug else False,
+    echo=True if app_settings.IS_DEBUG else False,
     future=True
 )
 async_session: sessionmaker = sessionmaker(

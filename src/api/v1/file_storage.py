@@ -14,7 +14,7 @@ from db.db import async_session, get_session
 from db.redis_cache import get_redis_client
 from db.storage_s3 import get_minio_client
 from models.user import User
-from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse, DownloadFile, UserFilesResponse
+from schemas.file_storage_schemas import UploadFileResponse, DownloadFile, UserFilesResponse
 from services.file_storage_service import uploaded_files_crud
 from services.users_service import users_crud
 
@@ -122,10 +122,17 @@ async def download_file(
         username=await check_token(token),
     )
     bucket_name: str = f'storage-{user_model.id}'
-    response = minio_client.get_object(
-        bucket_name=bucket_name,
-        object_name=request_body.file_path,
-    )
+    if request_body.file_path is None:
+        response = minio_client.get_object(
+            bucket_name=bucket_name,
+            object_name=request_body.file_path,
+        )
+    else:
+        response = minio_client.get_object(
+            bucket_name=bucket_name,
+            object_name=request_body.file_path,
+            version_id=request_body.version_id
+        )
     file_content = response.read()
     return StreamingResponse(
         iter([file_content]),

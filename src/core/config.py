@@ -10,26 +10,24 @@ load_dotenv()
 class AppSettings(BaseSettings):
     """
     Настройки приложения.
-
-    :param is_debug: Режим отладки.
-    :param app_title: Название приложения.
-    :param database_dsn: Строка подключения к базе данных.
     """
-    is_debug: bool
-    app_title: str
-    SECRET_KEY: str = "your-secret-key"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    ALGORITHM: str
+    APP_TITLE: str
     DATABASE_DSN: PostgresDsn
-
+    IS_DEBUG: bool
+    MINIO_HOST: str
+    REDIS_DB: int
+    REDIS_HOST: str
+    REDIS_PORT: int
+    SECRET_KEY: str
 
     class Config:
         """
         Настройки конфигурации.
-
-        :param env_file: Файл с настройками.
         """
+
         env_file = '.env'
 
 

@@ -1,6 +1,6 @@
 import asyncio
 import os
-
+from core.config import app_settings
 from dotenv import load_dotenv
 from minio import Minio
 
@@ -15,7 +15,7 @@ async def get_minio_client():
     minio_client: Minio = await loop.run_in_executor(
         None,
         lambda: Minio(
-            'localhost:9000',
+            app_settings.MINIO_HOST,
             access_key=os.getenv('aws_access_key_id'),
             secret_key=os.getenv('aws_secret_access_key'),
             secure=False,

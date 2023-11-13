@@ -2,11 +2,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from typing import Generic, Optional, Type, TypeVar
 
-from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from passlib.context import CryptContext
-from passlib.hash import sha256_crypt
 from pydantic import BaseModel
 from sqlalchemy import exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +14,6 @@ from models.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar('CreateSchemaType', bound=BaseModel)
-# DeleteSchemaType = TypeVar('DeleteSchemaType', bound=BaseModel)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class Repository(ABC):

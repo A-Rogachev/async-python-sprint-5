@@ -1,5 +1,5 @@
 from models.user import User as UserModel
-from schemas.users import UserCreate
+from schemas.user_schemas import UserCreate
 
 from .base import UserRepositoryDB
 
