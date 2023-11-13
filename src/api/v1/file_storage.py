@@ -70,7 +70,7 @@ async def upload_file(
         minio_client,
     )
     object_name: str = await get_path_name_for_file(path, file_to_upload.filename)
-    # сделать проверку на совпадение имен.
+
     file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
     response = minio_client.put_object(
         bucket_name=bucketname,
