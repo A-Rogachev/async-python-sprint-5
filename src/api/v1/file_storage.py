@@ -17,11 +17,12 @@ from models.user import User
 from schemas.file_storage_schemas import UploadFileResponse, DownloadFile, UserFilesResponse
 from services.file_storage_service import uploaded_files_crud
 from services.users_service import users_crud
+from minio.error import S3Error
 
-files_router: APIRouter = APIRouter()
 from minio.versioningconfig import ENABLED, VersioningConfig
 from starlette.responses import StreamingResponse
 
+files_router: APIRouter = APIRouter()
 
 async def create_bucket_if_not_exists(
     bucketname: str,
@@ -122,17 +123,20 @@ async def download_file(
         username=await check_token(token),
     )
     bucket_name: str = f'storage-{user_model.id}'
-    if request_body.file_path is None:
-        response = minio_client.get_object(
-            bucket_name=bucket_name,
-            object_name=request_body.file_path,
-        )
-    else:
-        response = minio_client.get_object(
-            bucket_name=bucket_name,
-            object_name=request_body.file_path,
-            version_id=request_body.version_id
-        )
+    try:
+        if request_body.file_path is None:
+            response = minio_client.get_object(
+                bucket_name=bucket_name,
+                object_name=request_body.file_path,
+            )
+        else:
+            response = minio_client.get_object(
+                bucket_name=bucket_name,
+                object_name=request_body.file_path,
+                version_id=request_body.version_id
+            )
+    except S3Error:
+        raise HTTPException(status_code=404, detail='Ошибка при загрузке файла')
     file_content = response.read()
     return StreamingResponse(
         iter([file_content]),
@@ -169,4 +173,3 @@ async def get_all_user_files(
             in all_records
         ],
     )
-        
