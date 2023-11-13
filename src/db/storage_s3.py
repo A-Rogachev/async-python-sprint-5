@@ -1,8 +1,8 @@
 import asyncio
-from minio import Minio
+import os
 
 from dotenv import load_dotenv
-import os
+from minio import Minio
 
 load_dotenv()
 

@@ -1,6 +1,6 @@
 from .base import AppBaseModel
 from sqlalchemy import Column, Integer, String, DateTime
-
+from sqlalchemy.orm import relationship
 
 class User(AppBaseModel):
     """
@@ -14,3 +14,5 @@ class User(AppBaseModel):
     password = Column(type_=String(100), nullable=False)
     email = Column(type_=String(100), unique=True, nullable=False)
     is_active = Column(type_=Integer, default=1)
+
+    uploaded_files = relationship('UploadedFile', back_populates='user')

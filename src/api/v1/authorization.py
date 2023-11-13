@@ -1,4 +1,5 @@
 from datetime import timedelta
+
 import jwt
 import redis
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +13,6 @@ from db.redis_cache import get_redis_client
 from models.user import User
 from schemas.users import UserAuth, UserCreate, UserInDB, UserToken
 from services.users_service import users_crud
-
 
 users_router: APIRouter = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")

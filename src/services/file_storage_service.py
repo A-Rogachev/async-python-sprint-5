@@ -1,9 +1,10 @@
-from typing import Type, TypeVar, Optional
+from typing import Optional, Type, TypeVar
 
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.uploaded_file import UploadedFile
 from schemas.file_storage_schemas import UploadFileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+
 ModelType = TypeVar('ModelType', bound=UploadedFile)
 CreateSchemaType = TypeVar('CreateSchemaType', bound=UploadFileResponse)
 
@@ -18,7 +19,8 @@ class FileStorageRepositoryDB:
     async def create_record(
         self,
         db: AsyncSession,
-        uploaded_file_data) -> ModelType:
+        uploaded_file_data
+    ) -> ModelType:
         """
         Создание нового записи в БД о загруженном файле.
         """

@@ -4,7 +4,7 @@ import psycopg2
 import redis
 from fastapi import APIRouter, Depends
 
-from api.v1.authorization import oauth2_scheme, check_token
+from api.v1.authorization import check_token, oauth2_scheme
 from core.config import app_settings
 from db.redis_cache import get_redis_client
 from schemas.db_services import DbServicesPing

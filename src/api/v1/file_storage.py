@@ -1,25 +1,27 @@
 
+import os
 from typing import Any, Optional
 
 import jwt
 import minio
 import redis
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from services.file_storage_service import uploaded_files_crud
-from api.v1.authorization import oauth2_scheme
+
+from api.v1.authorization import check_token, oauth2_scheme
 from core.config import app_settings
 from db.db import async_session, get_session
 from db.redis_cache import get_redis_client
 from db.storage_s3 import get_minio_client
-from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse
 from models.user import User
+from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse
+from services.file_storage_service import uploaded_files_crud
 from services.users_service import users_crud
-from api.v1.authorization import check_token
-import os
+
 files_router: APIRouter = APIRouter()
+from minio.versioningconfig import ENABLED, VersioningConfig
 from starlette.responses import StreamingResponse
-from minio.versioningconfig import VersioningConfig, ENABLED
+
 
 async def create_bucket_if_not_exists(
     bucketname: str,
@@ -27,6 +29,8 @@ async def create_bucket_if_not_exists(
 ):
     """
     Создает корзину для пользователя в хранилище, в случае если она не существует.
+    Включает версионирование для корзины для возможности загружать различные
+    версии одинакового файла.
     """
     if not minio_client.bucket_exists(bucketname):
         minio_client.make_bucket(bucketname)
@@ -71,59 +75,38 @@ async def upload_file(
     object_name: str = await get_path_name_for_file(path, file_to_upload.filename)
 
     file_size: int = os.fstat(file_to_upload.file.fileno()).st_size
-    response = minio_client.put_object(
-        bucket_name=bucketname,
-        object_name=object_name,
-        data=file_to_upload.file,
-        length=file_size,
-        content_type=file_to_upload.content_type
-    )
 
-
-
-    await uploaded_files_crud.create(
-        db,
-        uploaded_file_data = dict(
-            version_id=response.version_id,
-            user_id=user_model.id,
-            name=file_to_upload.filename,
-            size=file_size,
-            path=object_name,
+    try:
+        response = minio_client.put_object(
+            bucket_name=bucketname,
+            object_name=object_name,
+            data=file_to_upload.file,
+            length=file_size,
+            content_type=file_to_upload.content_type
         )
-    )
-
-    # здесь записываем в базу postgres
-    # ---------------------------------------------------------
-    # to_postgres = {
-    #     'id': 'some_id',
-    #     'name': file_to_upload.filename,
-    #     'created_ad': '2020-09-11T17:22:05Z',
-    #     'size': file_size,
-    #     'path': object_name,
-    # }
-    # from pprint import pprint
-    # pprint(to_postgres)
-    # ---------------------------------------------------------
-
-    return {"message": 'success'}
-
-
-# {
-#     "version_id": "a19ad56c-d8c6-4376-b9bb-ea82f7f5a853",
-#     "name": "notes.txt",
-#     "created_ad": "2020-09-11T17:22:05Z",
-#     "path": "/homework/test-fodler/notes.txt",
-#     "size": 8512,
-# }
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    else:
+        try:
+            new_uploaded_file_record = await uploaded_files_crud.create_record(
+                db,
+                uploaded_file_data = dict(
+                    version_id=response.version_id,
+                    user_id=user_model.id,
+                    name=file_to_upload.filename,
+                    size=file_size,
+                    path=object_name,
+                )
+            )
+        except Exception as create_record_error:
+            raise HTTPException(status_code=400, detail=str(create_record_error))
+        else:
+            return UploadFileResponse(
+                **new_uploaded_file_record.__dict__
+            ).model_dump()
 
 
 
-
-from pydantic import BaseModel
-
-class DownloadFile(BaseModel):
-    file_path: str
-    file_id: Optional[str] = None
 
 # TODO: здесь добавить возможность указать директорию для скачивания
 @files_router.post('/download')
