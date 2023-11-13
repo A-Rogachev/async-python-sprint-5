@@ -27,10 +27,6 @@ class Repository(ABC):
     def create(self, *args, **kwargs):
         raise NotImplementedError
 
-    # @abstractmethod
-    # def delete(self, *args, **kwargs):
-    #     raise NotImplementedError
-
 
 class UserRepositoryDB(
     Repository,

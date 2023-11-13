@@ -6,8 +6,7 @@ import minio
 import redis
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.responses import FileResponse
-
+from services.file_storage_service import uploaded_files_crud
 from api.v1.authorization import oauth2_scheme
 from core.config import app_settings
 from db.db import async_session, get_session
@@ -79,15 +78,19 @@ async def upload_file(
         length=file_size,
         content_type=file_to_upload.content_type
     )
-    print(response.version_id)
-    
-    import datetime
-    date = datetime.datetime.now().isoformat()
-    print(response.version_id, type(response.version_id))
-    print(file_to_upload.filename, type(file_to_upload.filename))
-    print(date, type(date))
-    print(file_size, type(file_size))
-    print(object_name, type(object_name))
+
+
+
+    await uploaded_files_crud.create(
+        db,
+        uploaded_file_data = dict(
+            version_id=response.version_id,
+            user_id=user_model.id,
+            name=file_to_upload.filename,
+            size=file_size,
+            path=object_name,
+        )
+    )
 
     # здесь записываем в базу postgres
     # ---------------------------------------------------------
