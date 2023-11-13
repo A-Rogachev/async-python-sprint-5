@@ -30,3 +30,14 @@ class UploadFileResponse(BaseModel):
     created_at: datetime
     path: str
     size: int
+
+
+class UserFilesResponse(BaseModel):
+    """
+    Схема, используемая для получения информации о загруженных файлах.
+    """
+
+    user_id: int
+    user_name: str
+    files_count: int
+    files: list[UploadFileResponse]

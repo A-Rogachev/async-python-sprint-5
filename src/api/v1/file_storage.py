@@ -14,7 +14,7 @@ from db.db import async_session, get_session
 from db.redis_cache import get_redis_client
 from db.storage_s3 import get_minio_client
 from models.user import User
-from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse, DownloadFile
+from schemas.file_storage_schemas import UploadFileRequest, UploadFileResponse, DownloadFile, UserFilesResponse
 from services.file_storage_service import uploaded_files_crud
 from services.users_service import users_crud
 
@@ -117,7 +117,6 @@ async def download_file(
     """
     Скачивание файла из хранилища.
     """
-    # TODO: если файл не найден, то is_downloadabale = False
     user_model: User = await users_crud.get_user_by_username(
         db=db,
         username=await check_token(token),
@@ -135,8 +134,8 @@ async def download_file(
     )
 
 
-@files_router.get('/files')
-async def get_records_about_user_files(
+@files_router.get('/')
+async def get_all_user_files(
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
     minio_client: minio.Minio = Depends(get_minio_client),
@@ -145,5 +144,22 @@ async def get_records_about_user_files(
     """
     Возвращает информацию о всех загруженных пользователем файлах.
     """
-
-    
+    user_model: User = await users_crud.get_user_by_username(
+        db=db,
+        username=await check_token(token),
+    )
+    all_records = await uploaded_files_crud.get_all_user_records(
+        user_model.id,
+        db,
+    )
+    return UserFilesResponse(
+        user_id=user_model.id,
+        user_name=user_model.username,
+        files_count=len(all_records),
+        files=[
+            UploadFileResponse(**record.__dict__).model_dump()
+            for record
+            in all_records
+        ],
+    )
+        

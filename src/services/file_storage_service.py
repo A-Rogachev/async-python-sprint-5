@@ -1,7 +1,7 @@
 from typing import Optional, Type, TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select
 from models.uploaded_file import UploadedFile
 from schemas.file_storage_schemas import UploadFileResponse
 
@@ -29,6 +29,19 @@ class FileStorageRepositoryDB:
         await db.commit()
         await db.refresh(file_obj)
         return file_obj
+
+    async def get_all_user_records(
+        self,
+        user_id: int,
+        db: AsyncSession
+    ) -> list[ModelType]:
+        """
+        Возвращает все записи в БД о загруженных файлах.
+        """
+        statement = select(self._model).filter_by(user_id=user_id)
+        result = await db.execute(statement=statement)
+        return result.scalars().all()
+    
 
     # async def get_user_by_username(
     #     self,
