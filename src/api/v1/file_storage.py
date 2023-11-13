@@ -81,6 +81,13 @@ async def upload_file(
     )
     print(response.version_id)
     
+    import datetime
+    date = datetime.datetime.now().isoformat()
+    print(response.version_id, type(response.version_id))
+    print(file_to_upload.filename, type(file_to_upload.filename))
+    print(date, type(date))
+    print(file_size, type(file_size))
+    print(object_name, type(object_name))
 
     # здесь записываем в базу postgres
     # ---------------------------------------------------------
@@ -90,7 +97,6 @@ async def upload_file(
     #     'created_ad': '2020-09-11T17:22:05Z',
     #     'size': file_size,
     #     'path': object_name,
-    #     'is_downloadable': True
     # }
     # from pprint import pprint
     # pprint(to_postgres)
@@ -105,7 +111,6 @@ async def upload_file(
 #     "created_ad": "2020-09-11T17:22:05Z",
 #     "path": "/homework/test-fodler/notes.txt",
 #     "size": 8512,
-#     "is_downloadable": true
 # }
 
 
