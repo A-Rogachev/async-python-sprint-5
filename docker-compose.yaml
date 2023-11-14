@@ -39,20 +39,20 @@ services:
     restart: unless-stopped
 
 
-  # backend_app:
-  #   build: ./dockerization/.
-  #   container_name: backend-app
-  #   volumes:
-  #     - .:/urls_app/
-  #   ports:
-  #     - '127.0.0.1:8000:8000'
-  #   command: >
-  #     sh -c "cd ./src/ && alembic upgrade head && python main.py"
-  #   depends_on:
-  #     - urls_db
-  #   env_file:
-  #     - ./.env
-  #   restart: unless-stopped
+  backend_app:
+    build: ./dockerization/.
+    container_name: backend-app
+    volumes:
+      - .:/file_storage_app/
+    ports:
+      - '127.0.0.1:8000:8000'
+    command: >
+      sh -c "cd ./src/ && alembic upgrade head && python main.py"
+    depends_on:
+      - filestorage_db
+    env_file:
+      - ./.env
+    restart: unless-stopped
 
 volumes:
   filestorage_db_volume:
