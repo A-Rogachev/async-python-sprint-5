@@ -30,7 +30,6 @@ services:
     env_file:
       - ./.env
     volumes:
-      # - /docker/minio:/data
       - minio_volume:/data
     ports:
       - '127.0.0.1:9000:9000'
