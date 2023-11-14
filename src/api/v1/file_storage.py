@@ -145,7 +145,7 @@ async def download_file(
     )
 
 
-@files_router.get('/')
+@files_router.get('')
 async def get_all_user_files(
     token: str = Depends(oauth2_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
