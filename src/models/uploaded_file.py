@@ -18,3 +18,5 @@ class UploadedFile(AppBaseModel):
     path = Column(type_=String(100), nullable=False)
 
     user = relationship('User', back_populates='uploaded_files')
+    # NOTE: в случае совпадения пути, в хранилище записывается новая версия файла,
+    # старая доступна по version_id

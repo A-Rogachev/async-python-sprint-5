@@ -21,6 +21,7 @@ fastapi==0.104.1
 flake8==6.1.0
 frozenlist==1.4.0
 greenlet==3.0.1
+gunicorn==21.2.0
 h11==0.14.0
 idna==3.4
 isort==5.12.0
@@ -31,6 +32,7 @@ mccabe==0.7.0
 minio==7.2.0
 multidict==6.0.4
 orjson==3.9.10
+packaging==23.2
 passlib==1.7.4
 psycopg2-binary==2.9.9
 pyasn1==0.5.0

@@ -17,6 +17,8 @@ class AppSettings(BaseSettings):
     APP_TITLE: str
     DATABASE_DSN: PostgresDsn
     IS_DEBUG: bool
+    MAX_FILE_SIZE: int
+    MAX_FILE_SIZE_IN_MB: int
     MINIO_HOST: str
     REDIS_DB: int
     REDIS_HOST: str

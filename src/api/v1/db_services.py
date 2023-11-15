@@ -20,7 +20,7 @@ async def ping(
     """
     Получение информации о времени доступа ко всем связанным сервисам.
     """
-    check_token(token)
+    await check_token(token)
     postgresql_response_time: str = await get_postgresql_ping_value()
     redis_response_time: str = await get_redis_ping_value()
     return DbServicesPing(

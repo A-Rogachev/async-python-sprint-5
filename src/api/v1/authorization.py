@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Optional
 
 import jwt
 import redis
@@ -12,6 +13,7 @@ from db.db import get_session
 from db.redis_cache import get_redis_client
 from models.user import User
 from schemas.user_schemas import UserAuth, UserCreate, UserInDB, UserToken
+from services.base import UserRepositoryDB
 from services.users_service import users_crud
 
 users_router: APIRouter = APIRouter()
@@ -33,6 +35,17 @@ async def check_token(token: str):
         raise HTTPException(status_code=401, detail='Missing or invalid token.')
     return username
 
+async def get_user_by_username_dependency(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_session),
+) -> Optional[User]:
+    """
+    Получение пользователя по имени (зависимость).
+    """
+    username: str = await check_token(token)
+    user_repository = UserRepositoryDB(User)
+    return await user_repository.get_user_by_username(db, username)
+
 
 @users_router.post('/register', response_model=UserInDB, status_code=fs_status.HTTP_201_CREATED)
 async def register_user(
@@ -43,11 +56,11 @@ async def register_user(
     """
     Регистрация нового пользователя.
     """
-    user_with_this_data_exists = await users_crud.check_userdata_in_db(
+    user_with_this_data_exists: bool = await users_crud.check_userdata_in_db(
         db,
         user_data={'username': user_creating.username, 'email': user_creating.email},
     )
-    if bool(user_with_this_data_exists):
+    if user_with_this_data_exists:
         raise HTTPException(
             status_code=fs_status.HTTP_400_BAD_REQUEST,
             detail='Record with the same username or email already exists'
