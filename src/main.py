@@ -23,3 +23,5 @@ if __name__ == '__main__':
         port=8000,
         reload=True,
     )
+
+# -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:8000 src.main:app

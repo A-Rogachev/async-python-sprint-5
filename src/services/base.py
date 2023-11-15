@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from sqlalchemy import exists, or_, select, update
+from sqlalchemy import exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import app_settings
@@ -40,30 +40,24 @@ class UserRepositoryDB(
         self,
         db: AsyncSession,
         user_data: dict[str, str],
-    ) -> Optional[ModelType]:
+    ) -> bool:
         """
         Проверка на существование пользователя и электронной почты в БД.
         """
-        statement = select(self._model).where(
+        statement = select(exists().where(
             or_(
                 self._model.username == user_data.get('username'),
                 self._model.email == user_data.get('email')
             )
-        )
-        result = await db.execute(statement=statement)
-        return result.scalar()
+        ))
+        result = await db.scalar(statement)
+        return bool(result)
 
-    async def get_user_by_username(
-        self,
-        db: AsyncSession,
-        username: str,
-    ) -> Optional[ModelType]:
+    async def get_user_by_username(self, db: AsyncSession, username: str) -> Optional[ModelType]:
         """
         Поиск пользователя по имени.
         """
-        statement = select(self._model).where(
-            self._model.username == username
-        )
+        statement = select(self._model).where(self._model.username == username)
         result = await db.execute(statement=statement)
         return result.scalar_one_or_none()
 

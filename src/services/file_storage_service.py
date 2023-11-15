@@ -43,18 +43,4 @@ class FileStorageRepositoryDB:
         return result.scalars().all()
     
 
-    # async def get_user_by_username(
-    #     self,
-    #     db: AsyncSession,
-    #     username: str,
-    # ) -> Optional[ModelType]:
-    #     """
-    #     Поиск пользователя по имени.
-    #     """
-    #     statement = select(self._model).where(
-    #         self._model.username == username
-    #     )
-    #     result = await db.execute(statement=statement)
-    #     return result.scalar_one_or_none()
-
 uploaded_files_crud = FileStorageRepositoryDB(UploadedFile)
