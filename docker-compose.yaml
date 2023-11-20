@@ -5,8 +5,6 @@ services:
   filestorage_db:
     image: postgres:15.3-alpine
     container_name: filestorage-db
-    ports:
-      - "5432:5432"
     volumes:
       - filestorage_db_volume:/var/lib/postgresql/data/
     env_file:
@@ -18,8 +16,6 @@ services:
     container_name: filestorage-redis
     volumes:
       - filestorage_redis_volume:/data
-    ports:
-      - "6379:6379"
     depends_on:
       - filestorage_db
     restart: unless-stopped
@@ -32,7 +28,7 @@ services:
     volumes:
       - minio_volume:/data
     ports:
-      - "9000:9000"
+      - "${MINIO_SERVICE_PORT:-9000}:9000"
       - "${MINIO_PUBLIC_PORT:-9001}:9001"
     command: server /data --console-address ":9001"
     depends_on:

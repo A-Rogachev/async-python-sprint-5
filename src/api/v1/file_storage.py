@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 import minio
 import redis
+import urllib3.exceptions
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -83,10 +84,10 @@ async def upload_file(
             length=file_size,
             content_type=file_to_upload.content_type
         )
-    except minio.error.S3Error as error:
+    except urllib3.exceptions.NewConnectionError as error:
         raise HTTPException(
             status_code=500,
-            detail=f'Error response is received when executing S3 operation: {str(error)}',
+            detail=f'Connection error: {str(error)}',
         )
     except minio.error.InvalidResponseError as error:
         raise HTTPException(
